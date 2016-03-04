@@ -13,22 +13,19 @@
 
   newSQLError = function(error, code) {
     var sqlError;
-    sqlError = error;
     if (!code) {
       code = 0;
     }
-    if (!sqlError) {
+    if (!error) {
       sqlError = new Error("a plugin had an error but provided no response");
       sqlError.code = code;
-    }
-    if (typeof sqlError === "string") {
+    }else if (typeof error === "string") {
       sqlError = new Error(error);
       sqlError.code = code;
-    }
-    if (!sqlError.code && sqlError.message) {
+    }else if (!error.code && error.message) {
+      sqlError = error;
       sqlError.code = code;
-    }
-    if (!sqlError.code && !sqlError.message) {
+    }else if (!error.code && !error.message) {
       sqlError = new Error("an unknown error was returned: " + JSON.stringify(sqlError));
       sqlError.code = code;
     }
