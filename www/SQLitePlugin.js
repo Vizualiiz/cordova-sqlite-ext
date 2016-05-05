@@ -1,5 +1,5 @@
 (function() {
-  var DB_STATE_INIT, DB_STATE_OPEN, READ_ONLY_REGEX, SQLiteFactory, SQLitePlugin, SQLitePluginTransaction, argsArray, dblocations, newSQLError, nextTick, root, txLocks;
+  var DB_STATE_INIT, DB_STATE_OPEN, READ_ONLY_REGEX, SQLiteFactory, SQLitePlugin, SQLitePluginTransaction, SelfTest, argsArray, dblocations, iosLocationMap, newSQLError, nextTick, root, txLocks;
 
   root = this;
 
@@ -529,6 +529,12 @@
 
   dblocations = ["docs", "libs", "nosync"];
 
+  iosLocationMap = {
+    'default': 'nosync',
+    'Documents': 'docs',
+    'Library': 'libs'
+  };
+
   SQLiteFactory = {
 
     /*
@@ -537,36 +543,23 @@
     If this function is edited in Javascript then someone will
     have to translate it back to CoffeeScript by hand.
      */
-    opendb: argsArray(function(args) {
-      var dblocation, errorcb, first, okcb, openargs;
-      if (args.length < 1) {
-        return null;
+    openDatabase: argsArray(function(args) {
+      var dblocation, errorcb, okcb, openargs;
+      if (args.length < 1 || !args[0]) {
+        throw newSQLError('Sorry missing mandatory open arguments object in openDatabase call');
       }
-      first = args[0];
-      openargs = null;
-      okcb = null;
-      errorcb = null;
-      if (first.constructor === String) {
-        openargs = {
-          name: first
-        };
-        if (args.length >= 5) {
-          okcb = args[4];
-          if (args.length > 5) {
-            errorcb = args[5];
-          }
-        }
-      } else {
-        openargs = first;
-        if (args.length >= 2) {
-          okcb = args[1];
-          if (args.length > 2) {
-            errorcb = args[2];
-          }
-        }
+      if (args[0].constructor === String) {
+        throw newSQLError('Sorry first openDatabase argument must be an object');
       }
-      dblocation = !!openargs.location ? dblocations[openargs.location] : null;
-      openargs.dblocation = dblocation || dblocations[0];
+      openargs = args[0];
+      if (!openargs.name) {
+        throw newSQLError('Database name value is missing in openDatabase call');
+      }
+      if (!openargs.iosDatabaseLocation && !openargs.location && openargs.location !== 0) {
+        throw newSQLError('Database location or iosDatabaseLocation value is now mandatory in openDatabase call');
+      }
+      dblocation = !!openargs.location && openargs.location === 'default' ? iosLocationMap['default'] : !!openargs.iosDatabaseLocation ? iosLocationMap[openargs.iosDatabaseLocation] : dblocations[openargs.location];
+      openargs.dblocation = dblocation;
       if (!!openargs.createFromLocation && openargs.createFromLocation === 1) {
         openargs.createFromResource = "1";
       }
@@ -576,24 +569,133 @@
       if (!!openargs.androidLockWorkaround && openargs.androidLockWorkaround === 1) {
         openargs.androidBugWorkaround = 1;
       }
+      okcb = null;
+      errorcb = null;
+      if (args.length >= 2) {
+        okcb = args[1];
+        if (args.length > 2) {
+          errorcb = args[2];
+        }
+      }
       return new SQLitePlugin(openargs, okcb, errorcb);
     }),
-    deleteDb: function(first, success, error) {
+    deleteDatabase: function(first, success, error) {
       var args, dblocation;
       args = {};
       if (first.constructor === String) {
-        args.path = first;
-        args.dblocation = dblocations[0];
+        throw newSQLError('Sorry first deleteDatabase argument must be an object');
       } else {
         if (!(first && first['name'])) {
           throw new Error("Please specify db name");
         }
         args.path = first.name;
-        dblocation = !!first.location ? dblocations[first.location] : null;
-        args.dblocation = dblocation || dblocations[0];
       }
+      if (!first.iosDatabaseLocation && !first.location && first.location !== 0) {
+        throw newSQLError('Database location or iosDatabaseLocation value is now mandatory in deleteDatabase call');
+      }
+      dblocation = !!first.location && first.location === 'default' ? iosLocationMap['default'] : !!first.iosDatabaseLocation ? iosLocationMap[first.iosDatabaseLocation] : dblocations[first.location];
+      args.dblocation = dblocation;
       delete SQLitePlugin.prototype.openDBs[args.path];
       return cordova.exec(success, error, "SQLitePlugin", "delete", [args]);
+    }
+  };
+
+  SelfTest = {
+    DBNAME: '___$$$___litehelpers___$$$___test___$$$___.db',
+    start: function(successcb, errorcb) {
+      return SQLiteFactory.deleteDatabase({
+        name: SelfTest.DBNAME,
+        location: 'default'
+      }, (function() {
+        return SelfTest.start2(successcb, errorcb);
+      }), (function() {
+        return SelfTest.start2(successcb, errorcb);
+      }));
+    },
+    start2: function(successcb, errorcb) {
+      return SQLiteFactory.openDatabase({
+        name: SelfTest.DBNAME,
+        location: 'default'
+      }, function(db) {
+        return db.sqlBatch(['CREATE TABLE TestTable(TestColumn);', ['INSERT INTO TestTable (TestColumn) VALUES (?);', ['test-value']]], function() {
+          return db.executeSql('SELECT * FROM TestTable', [], function(resutSet) {
+            if (!resutSet.rows) {
+              SelfTest.finishWithError(errorcb, 'Missing resutSet.rows');
+              return;
+            }
+            if (!resutSet.rows.length) {
+              SelfTest.finishWithError(errorcb, 'Missing resutSet.rows.length');
+              return;
+            }
+            if (resutSet.rows.length !== 1) {
+              SelfTest.finishWithError(errorcb, "Incorrect resutSet.rows.length value: " + resutSet.rows.length + " (expected: 1)");
+              return;
+            }
+            if (!resutSet.rows.item(0).TestColumn) {
+              SelfTest.finishWithError(errorcb, 'Missing resutSet.rows.item(0).TestColumn');
+              return;
+            }
+            if (resutSet.rows.item(0).TestColumn !== 'test-value') {
+              SelfTest.finishWithError(errorcb, "Incorrect resutSet.rows.item(0).TestColumn value: " + (resutSet.rows.item(0).TestColumn) + " (expected: 'test-value')");
+              return;
+            }
+            return db.transaction(function(tx) {
+              return tx.executeSql('UPDATE TestTable SET TestColumn = ?', ['new-value']);
+            }, function(tx_err) {
+              return SelfTest.finishWithError(errorcb, "UPDATE transaction error: " + tx_err);
+            }, function() {
+              return db.readTransaction(function(tx2) {
+                return tx2.executeSql('SELECT * FROM TestTable', [], function(ignored, resutSet2) {
+                  if (!resutSet2.rows) {
+                    throw newSQLError('Missing resutSet.rows');
+                  }
+                  if (!resutSet2.rows.length) {
+                    throw newSQLError('Missing resutSet.rows.length');
+                  }
+                  if (resutSet2.rows.length !== 1) {
+                    throw newSQLError("Incorrect resutSet.rows.length value: " + resutSet.rows.length + " (expected: 1)");
+                  }
+                  if (!resutSet2.rows.item(0).TestColumn) {
+                    throw newSQLError('Missing resutSet.rows.item(0).TestColumn');
+                  }
+                  if (resutSet2.rows.item(0).TestColumn !== 'new-value') {
+                    throw newSQLError("Incorrect resutSet.rows.item(0).TestColumn value: " + (resutSet.rows.item(0).TestColumn) + " (expected: 'test-value')");
+                  }
+                });
+              }, function(tx2_err) {
+                return SelfTest.finishWithError(errorcb, "readTransaction error: " + tx2_err);
+              }, function() {
+                return db.close(function() {
+                  return SQLiteFactory.deleteDatabase({
+                    name: SelfTest.DBNAME,
+                    location: 'default'
+                  }, successcb, function(cleanup_err) {
+                    return SelfTest.finishWithError(errorcb, "Cleanup error: " + cleanup_err);
+                  });
+                }, function(close_err) {
+                  return SelfTest.finishWithError(errorcb, "close error: " + close_err);
+                });
+              });
+            });
+          }, function(select_err) {
+            return SelfTest.finishWithError(errorcb, "SELECT error: " + select_err);
+          });
+        }, function(batch_err) {
+          return SelfTest.finishWithError(errorcb, "sql batch error: " + batch_err);
+        });
+      }, function(open_err) {
+        return SelfTest.finishWithError(errorcb, "Open database error: " + open_err);
+      });
+    },
+    finishWithError: function(errorcb, message) {
+      return SQLiteFactory.deleteDatabase({
+        name: SelfTest.DBNAME,
+        location: 'default'
+      }, function() {
+        return errorcb(newSQLError(message));
+      }, function(err2) {
+        return errorcb(newSQLError("Cleanup error: " + err2 + " for error: " + message));
+      });
     }
   };
 
@@ -619,8 +721,9 @@
         }
       ]);
     },
-    openDatabase: SQLiteFactory.opendb,
-    deleteDatabase: SQLiteFactory.deleteDb
+    selfTest: SelfTest.start,
+    openDatabase: SQLiteFactory.openDatabase,
+    deleteDatabase: SQLiteFactory.deleteDatabase
   };
 
 }).call(this);

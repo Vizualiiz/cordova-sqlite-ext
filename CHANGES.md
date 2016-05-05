@@ -1,5 +1,47 @@
 # Changes
 
+## 0.10.0
+
+- Code to read BLOB data fixed and enabled for iOS version (as well as Android version)
+- Now using cordova-sqlite-ext-deps for SQLite 3.8.10.2 Android/iOS/Windows
+- Enforce minimum cordova-windows version (should be OK in Cordova 6.x)
+
+### cordova-sqlite-storage 1.2.2
+
+- Self-test function to verify ability to open/populate/read/delete a test database
+
+### cordova-sqlite-storage 1.2.1
+
+- Close Android SQLiteStatement after INSERT/UPDATE/DELETE
+- Specify minimum Cordova version 6.0.0
+- Lawnchair adapter fix: Changed remove method to work with key array
+
+## 0.9.1
+
+- Support Windows 8.1/Windows Phone 8.1 along with Windows 10
+- Fix PCH issue with Debug Win32 UWP (Windows 10) build
+
+### cordova-sqlite-storage 1.2.0
+
+- Rename Lawnchair adapter to prevent clash with standard webkit-sqlite adapter
+- Support location: 'default' setting in openDatabase & deleteDatabase
+
+### cordova-sqlite-storage 0.8.5
+
+- More explicit iosDatabaseLocation option
+- iOS database location is now mandatory
+- Split-up of some more spec test scripts
+
+## 0.9.0-prep
+
+- Mark upcoming BREAKING CHANGES to openDatabase parameters
+
+NOTICE: `0.8.6` release was published to npm based on the wrong branch and is withdrawn, to be completely superseded by the `0.9.*` release.
+
+## 0.8.4
+
+- Introduce Windows 10 UWP build (Windows 8.1 and Windows Phone 8.1 build disabled)
+
 ## 0.8.3
 
 ### cordova-sqlite-storage 0.8.2
@@ -7,12 +49,14 @@
 - Workaround fix for empty readTransaction issue (litehelpers/Cordova-sqlite-storage#409)
 - Split spec/www/spec/legacy.js into db-open-close-delete-test.js & tx-extended.js
 
-
 ## 0.8.1
 
 - Fix pre-populated database for Windows 8.1(+)/Windows Phone 8.1(+)
 - Separate SQLiteConnectorDatabase class for Android
 - Renamed SQLiteProxy.js to sqlite-proxy.js in Windows version
+
+### cordova-sqlite-storage 0.8.0
+
 - Simple sql batch transaction function
 - Echo test function
 - Remove extra runInBackground: step from iOS version
@@ -53,7 +97,7 @@
 - Fix plugin ID in plugin.xml to match npm package ID
 - Unpacked sqlite-native-driver.so libraries from jar
 - Fix conversion of INTEGER type (iOS version)
-- Disable code to read BLOB as Base-64 due to https://issues.apache.org/jira/browse/CB-9638
+- Disable code to read BLOB as Base-64 (iOS version) due to https://issues.apache.org/jira/browse/CB-9638
 
 ## 0.7.10
 

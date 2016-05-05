@@ -1,7 +1,7 @@
 {
   "name": "cordova-sqlite-ext",
-  "version": "0.8.3",
-  "description": "Native interface to SQLite for PhoneGap/Cordova with extras",
+  "version": "0.10.0",
+  "description": "Native interface to SQLite for PhoneGap/Cordova with extra features",
   "cordova": {
     "id": "cordova-sqlite-ext",
     "platforms": [
@@ -24,7 +24,7 @@
   "engines": [
     {
       "name": "cordova",
-      "version": ">=3.3.0"
+      "version": ">=6.0.0"
     }
   ],
   "author": "various",
@@ -32,5 +32,8 @@
   "bugs": {
     "url": "https://github.com/litehelpers/cordova-sqlite-ext/issues"
   },
-  "homepage": "https://github.com/litehelpers/cordova-sqlite-ext"
+  "homepage": "https://github.com/litehelpers/cordova-sqlite-ext",
+  "dependencies": {
+    "cordova-sqlite-ext-deps": "0.3.1"
+  }
 }
